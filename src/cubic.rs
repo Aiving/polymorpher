@@ -1,4 +1,7 @@
-use std::ops::{Add, Div, Mul};
+use std::{
+    fmt,
+    ops::{Add, Div, Mul},
+};
 
 use crate::geometry::{Aabb, DISTANCE_EPSILON, GeometryExt, Point, PointTransformer};
 
@@ -7,6 +10,18 @@ use crate::geometry::{Aabb, DISTANCE_EPSILON, GeometryExt, Point, PointTransform
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cubic {
     pub(crate) points: [Point; 4],
+}
+
+impl fmt::Display for Cubic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let [anchor0, control0, control1, anchor1] = self.points;
+
+        write!(
+            f,
+            "anchor0: ({:?}, {:?}) control0: ({:?}, {:?}), control1: ({:?}, {:?}), anchor1: ({:?}, {:?})",
+            anchor0.x, anchor0.y, control0.x, control0.y, control1.x, control1.y, anchor1.x, anchor1.y
+        )
+    }
 }
 
 impl Cubic {
@@ -257,13 +272,13 @@ impl Cubic {
             Self::new(
                 anchor0,
                 anchor0 * u + (control0 * t).to_vector(),
-                (control1 * t * t) + (anchor0 * u * u).to_vector() + (control0 * (2.0 * u * t)).to_vector(),
+                anchor0 * (u * u) + (control0 * (2.0 * u * t)).to_vector() + (control1 * (t * t)).to_vector(),
                 point_on_curve,
             ),
             Self::new(
                 // TODO: should calculate once and share the result
                 point_on_curve,
-                (anchor1 * t * t) + (control0 * u * u).to_vector() + (control1 * (2.0 * u * t)).to_vector(),
+                control0 * (u * u) + (control1 * (2.0 * u * t)).to_vector() + (anchor1 * (t * t)).to_vector(),
                 control1 * u + (anchor1 * t).to_vector(),
                 anchor1,
             ),

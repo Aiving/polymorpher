@@ -71,21 +71,19 @@ impl PathBuilder for kurbo::BezPath {
 }
 
 #[cfg(feature = "lyon")]
-impl<T: lyon_tessellation::path::traits::PathBuilder + lyon_tessellation::path::traits::Build> PathBuilder
-    for lyon_tessellation::path::builder::NoAttributes<T>
-{
+impl<T: lyon_path::traits::PathBuilder + lyon_path::traits::Build> PathBuilder for T {
     type Path = T::PathType;
 
     fn move_to(&mut self, point: Point) {
-        self.begin(point);
+        self.begin(point, &[]);
     }
 
     fn line_to(&mut self, point: Point) {
-        self.line_to(point);
+        self.line_to(point, &[]);
     }
 
     fn cubic_to(&mut self, ctrl1: Point, ctrl2: Point, to: Point) {
-        self.cubic_bezier_to(ctrl1, ctrl2, to);
+        self.cubic_bezier_to(ctrl1, ctrl2, to, &[]);
     }
 
     fn close(&mut self) {

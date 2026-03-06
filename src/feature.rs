@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{cubic::Cubic, geometry::PointTransformer};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -17,6 +19,19 @@ pub enum FeatureType {
 pub struct Feature {
     pub ty: FeatureType,
     pub cubics: Vec<Cubic>,
+}
+
+impl fmt::Display for Feature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.ty {
+            FeatureType::Edge => write!(f, "Edge"),
+            FeatureType::Corner { convex } => write!(
+                f,
+                "Corner: cubics={} convex={convex}",
+                self.cubics.iter().map(|c| format!("[{c}]")).collect::<Vec<_>>().join(", ")
+            ),
+        }
+    }
 }
 
 impl Feature {

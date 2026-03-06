@@ -1,4 +1,5 @@
 use core::f32;
+use std::fmt;
 
 use crate::{
     Cubic, Feature, RoundedPolygonBuilder,
@@ -26,6 +27,7 @@ impl CornerRounding {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoundedPoint {
     pub offset: Point,
     pub rounding: CornerRounding,
@@ -44,6 +46,7 @@ impl RoundedPoint {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct RoundedCorner {
     p0: Point,
     p1: Point,
@@ -159,8 +162,8 @@ impl RoundedCorner {
         actual_r: f32,
     ) -> Cubic {
         // side_start is the anchor, 'anchor' is actual control point
-        let side_direction = (side_start - corner).to_point().get_direction();
-        let curve_start = corner + (side_direction * actual_round_cut * (1.0 + actual_smoothing_values)).to_vector();
+        let side_direction = (side_start - corner).get_direction();
+        let curve_start = corner + (side_direction * actual_round_cut * (1.0 + actual_smoothing_values));
         // We use an approximation to cut a part of the circle section proportional to 1
         // - smooth, When smooth = 0, we take the full section, when smooth = 1,
         // we take nothing. TODO: revisit this, it can be problematic as it
@@ -170,12 +173,12 @@ impl RoundedCorner {
             actual_smoothing_values,
         );
         // The flanking curve ends on the circle
-        let curve_end = circle_center + (p - circle_center).normalize() * actual_r;
+        let curve_end = circle_center + (p - circle_center).get_direction() * actual_r;
         // The anchor on the circle segment side is in the intersection between the
         // tangent to the circle in the circle/flanking curve boundary and the
         // linear segment.
         let circle_tangent = (curve_end - circle_center).to_point().rotate90();
-        let anchor_end = Self::line_intersection(side_start, side_direction, curve_end, circle_tangent).unwrap_or(circle_segment_intersection);
+        let anchor_end = Self::line_intersection(side_start, side_direction.to_point(), curve_end, circle_tangent).unwrap_or(circle_segment_intersection);
         // From what remains, we pick a point for the start anchor.
         // 2/3 seems to come from design tools?
         let anchor_start = (curve_start + (anchor_end * 2.0).to_vector()) / 3.0;
@@ -205,10 +208,11 @@ impl RoundedCorner {
         // Scale the radius if needed
         let actual_r = self.corner_radius * actual_round_cut / self.expected_round_cut;
         // Distance from the corner (p1) to the center
-        let center_distance = actual_r.hypot(actual_round_cut);
+        #[allow(clippy::imprecise_flops)]
+        let center_distance = (actual_r * actual_r + actual_round_cut * actual_round_cut).sqrt();
 
         // Center of the arc we will use for rounding
-        self.center = self.p1 + (((self.d1 + self.d2) / 2.0).get_direction() * center_distance);
+        self.center = self.p1 + ((self.d1 + self.d2) / 2.0).get_direction() * center_distance;
 
         let circle_intersection0 = self.p1 + (self.d1 * actual_round_cut);
         let circle_intersection2 = self.p1 + (self.d2 * actual_round_cut);
@@ -255,7 +259,21 @@ pub struct RoundedPolygon {
     pub cubics: Vec<Cubic>,
 }
 
+impl fmt::Display for RoundedPolygon {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[RoundedPolygon. Cubics = {} || Features = {} || Center = ({}, {})]",
+            self.cubics.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "),
+            self.features.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "),
+            self.center.x,
+            self.center.y
+        )
+    }
+}
+
 impl RoundedPolygon {
+    #[track_caller]
     pub fn new(features: Vec<Feature>, center: Point) -> Self {
         let mut cubics = Vec::new();
 
@@ -500,9 +518,7 @@ impl RoundedPolygon {
                 );
             }
 
-            let corner = rounded_corners[i].get_cubics(allowed_cuts[0], allowed_cuts[1]);
-
-            corners.push(corner);
+            corners.push(rounded_corners[i].get_cubics(allowed_cuts[0], allowed_cuts[1]));
         }
 
         let mut temp_features = <Vec<Feature>>::new();
@@ -567,9 +583,7 @@ impl RoundedPolygon {
     pub fn normalized(self) -> Self {
         let bounds = self.aabb(true);
         let size = bounds.size();
-
         let max_side = size.width.max(size.height);
-
         let offset = ((Point::splat(max_side) - size) / 2.0 - bounds.min).to_point();
 
         self.transformed(|point| (point + offset.to_vector()) / max_side)
@@ -609,8 +623,13 @@ fn custom_polygon(points: &[RoundedPoint], repeats: usize, center: Option<Point>
     if mirroring {
         let angles = points
             .iter()
-            .map(|it| (it.offset - center).angle_from_x_axis().to_degrees())
+            .map(|it| {
+                let offset = it.offset - center;
+
+                offset.y.atan2(offset.x).to_degrees()
+            })
             .collect::<Vec<_>>();
+
         let distances = points.iter().map(|it| (it.offset - center).length()).collect::<Vec<_>>();
         let actual_repeats = repeats * 2;
         let section_angle = 360.0 / actual_repeats as f32;
@@ -620,16 +639,15 @@ fn custom_polygon(points: &[RoundedPoint], repeats: usize, center: Option<Point>
                 let i = if iteration % 2 == 0 { index } else { points.len() - index - 1 };
 
                 if i > 0 || iteration % 2 == 0 {
-                    let angle = section_angle
-                        .mul_add(
-                            iteration as f32,
-                            if iteration % 2 == 0 {
-                                angles[i]
-                            } else {
-                                2f32.mul_add(angles[0], section_angle - angles[i])
-                            },
-                        )
-                        .to_radians();
+                    let angle = (section_angle * iteration as f32
+                        + if iteration % 2 == 0 {
+                            angles[i]
+                        } else {
+                            2.0f32.mul_add(angles[0], section_angle - angles[i])
+                        })
+                        / 360.0
+                        * 2.0
+                        * f32::consts::PI;
 
                     let final_point = Point::new(angle.cos(), angle.sin()) * distances[i] + center.to_vector();
 
