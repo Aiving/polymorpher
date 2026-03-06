@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["pill_star_vertices_from_num_verts","star_vertices_from_num_verts"],"struct":["Circle","Pill","PillStar","Rectangle","RoundedPolygonBuilder","Star"],"trait":["HaveRadius","HaveRounding","HaveSize"]};

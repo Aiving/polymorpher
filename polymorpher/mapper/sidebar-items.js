@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["linear_map","validate_progress"],"struct":["DoubleMapper"]};

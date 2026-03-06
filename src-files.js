@@ -1,0 +1,2 @@
+createSrcSidebar('[["polymorpher",["",[],["cubic.rs","feature.rs","feature_mapper.rs","geometry.rs","lib.rs","mapper.rs","measured_polygon.rs","measurer.rs","morph.rs","path.rs","polygon_builder.rs","rounded_polygon.rs","shapes.rs","util.rs"]]]]');
+//{"start":19,"fragment_lengths":[225]}

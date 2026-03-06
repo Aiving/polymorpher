@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ANGLE_EPSILON","DISTANCE_EPSILON"],"trait":["GeometryExt","PointTransformer"],"type":["Aabb","Angle","Matrix2","Matrix3","Point","Size","Vector"]};

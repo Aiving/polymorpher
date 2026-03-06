@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["feature_dist_squared","feature_representative_point"],"struct":["DistanceVertex","MappingHelper"]};

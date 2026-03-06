@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DISTANCE_EPSILON"],"fn":["center_from_vertices","custom_polygon","vertices_from_count"],"struct":["CornerRounding","RoundedCorner","RoundedPoint","RoundedPolygon"]};
